@@ -42,3 +42,31 @@ def prepare_items(orders: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             "value": float(order.get("totalPrice") or 0.0),
         })
     return items
+
+
+def build_knapsack_table(items: List[Dict[str, Any]], capacity: int) -> List[List[float]]:
+    """
+    Monta a tabela da Programação Dinâmica (bottom-up).
+
+    OPT(i, w) = maior valor usando apenas os i primeiros pedidos com capacidade w.
+
+    Recorrência:
+      OPT(0, w) = 0
+      OPT(i, w) = OPT(i-1, w)                                   se w_i > w
+      OPT(i, w) = max(OPT(i-1, w), v_i + OPT(i-1, w - w_i))     caso contrário
+
+    Complexidade: O(n * W) de tempo e espaço.
+    """
+    n = len(items)
+    opt = [[0.0] * (capacity + 1) for _ in range(n + 1)]
+
+    for i in range(1, n + 1):
+        weight = items[i - 1]["weight"]
+        value = items[i - 1]["value"]
+        for w in range(capacity + 1):
+            if weight > w:
+                opt[i][w] = opt[i - 1][w]
+            else:
+                opt[i][w] = max(opt[i - 1][w], value + opt[i - 1][w - weight])
+
+    return opt
