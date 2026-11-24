@@ -19,6 +19,29 @@ class CheckoutPayload(BaseModel):
     user_id: Optional[str] = None
     deadline: Optional[str] = None
 
+# Peso aproximado (kg) de cada produto do catálogo, usado no carregamento do veículo (mochila)
+PRODUCT_WEIGHTS_KG = {
+    "Tênis Esportivo Nike Zoom": 1.2,
+    "Headphone Sony WH-1000XM4": 0.5,
+    "Câmera Canon EOS Rebel T7": 1.0,
+    "Relógio Smartwatch Apple Series 8": 0.3,
+    "Teclado Mecânico Keychron K2": 1.1,
+    "Mochila Dell Pro Slim 15": 0.9,
+    "Cadeira Gamer ThunderX3": 22.0,
+}
+DEFAULT_PRODUCT_WEIGHT_KG = 1.0
+
+
+def calculate_order_weight(order: dict) -> float:
+    """Soma o peso (kg) de todos os itens do pedido: quantidade x peso do produto."""
+    total = 0.0
+    for item in order.get("items") or []:
+        product = item.get("product") or {}
+        weight = PRODUCT_WEIGHTS_KG.get(product.get("name"), DEFAULT_PRODUCT_WEIGHT_KG)
+        total += weight * (item.get("quantity") or 1)
+    return round(total, 1)
+
+
 # Pedidos de demonstração resilientes com prazos realistas
 DEMO_ORDERS = [
     {
@@ -211,6 +234,7 @@ async def list_orders():
 
                     o_dict["deadline"] = deadline_dt.replace(microsecond=0).isoformat()
                     o_dict["customerName"] = f"Cliente #{o_dict.get('id')}"
+                    o_dict["weightKg"] = calculate_order_weight(o_dict)
                     result.append(o_dict)
                 return result
     except Exception as e:
@@ -222,6 +246,7 @@ async def list_orders():
     for idx, demo in enumerate(DEMO_ORDERS):
         offset = offsets[idx % len(offsets)]
         demo["deadline"] = (now + timedelta(minutes=offset)).replace(microsecond=0).isoformat()
+        demo["weightKg"] = calculate_order_weight(demo)
 
     return DEMO_ORDERS
 
@@ -245,6 +270,7 @@ async def get_order(order_id: int):
             if order:
                 o_dict = order.model_dump() if hasattr(order, "model_dump") else dict(order)
                 o_dict["deadline"] = (datetime.now() + timedelta(minutes=45)).isoformat()
+                o_dict["weightKg"] = calculate_order_weight(o_dict)
                 return o_dict
     except Exception as e:
         print(f"Erro ao buscar pedido {order_id}: {e}")
