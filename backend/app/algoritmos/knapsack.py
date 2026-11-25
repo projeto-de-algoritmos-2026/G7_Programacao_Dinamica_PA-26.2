@@ -172,7 +172,9 @@ def run_knapsack(
             raise ValueError(f"O pedido #{item['id']} possui peso ou valor negativo.")
 
     capacity = kg_to_units(capacity_kg)
-    opt = build_knapsack_table(items, capacity)
+    if capacity == 0:
+        raise ValueError("A capacidade mínima do veículo é de 0,1 kg.")
+    opt =build_knapsack_table(items, capacity)
     selected = find_selected_items(items, opt, capacity)
     if verbose:
         print_knapsack_log(items, opt, capacity, selected, transport)
