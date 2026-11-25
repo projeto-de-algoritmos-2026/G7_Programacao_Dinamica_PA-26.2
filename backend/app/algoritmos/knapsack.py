@@ -70,3 +70,27 @@ def build_knapsack_table(items: List[Dict[str, Any]], capacity: int) -> List[Lis
                 opt[i][w] = max(opt[i - 1][w], value + opt[i - 1][w - weight])
 
     return opt
+
+
+def find_selected_items(
+    items: List[Dict[str, Any]],
+    opt: List[List[float]],
+    capacity: int
+) -> List[Dict[str, Any]]:
+    """
+    Traceback: percorre a tabela de trás para frente para descobrir quais pedidos
+    entraram na solução ótima.
+
+    Se OPT(i, w) == OPT(i-1, w), o pedido i não foi escolhido.
+    Caso contrário, ele foi escolhido e a capacidade restante passa a ser w - w_i.
+
+    Complexidade: O(n).
+    """
+    selected = []
+    w = capacity
+    for i in range(len(items), 0, -1):
+        if opt[i][w] != opt[i - 1][w]:
+            selected.append(items[i - 1])
+            w -= items[i - 1]["weight"]
+    selected.reverse()
+    return selected
