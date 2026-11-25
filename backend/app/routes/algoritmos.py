@@ -10,6 +10,7 @@ from app.algoritmos.count_inversions import evaluate_manual_route
 from app.algoritmos.minimize_lateness import calculate_schedule_lateness, parse_iso_datetime
 from math import isfinite
 from app.algoritmos.closest_pair import find_closest_pair
+from app.algoritmos.knapsack import run_knapsack
 
 router = APIRouter(
     prefix="/api",
@@ -264,3 +265,31 @@ async def get_closest_pair(payload: ClosestPairRequest):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao calcular par mais próximo: {str(e)}")
+
+
+# ----------------------------------------------------
+# MOCHILA 0/1 - CARREGAMENTO DO VEÍCULO (PROGRAMAÇÃO DINÂMICA)
+# ----------------------------------------------------
+
+class KnapsackRequest(BaseModel):
+    orders: List[Dict[str, Any]]
+    transport: Optional[str] = None
+    capacityKg: Optional[float] = Field(default=None, gt=0, allow_inf_nan=False)
+
+@router.post("/load/knapsack")
+async def calculate_vehicle_load(payload: KnapsackRequest):
+    """
+    Executa o Problema da Mochila 0/1 (Programação Dinâmica):
+    escolhe o subconjunto de pedidos que cabe na capacidade de carga do veículo
+    e maximiza o valor total transportado.
+    """
+    if payload.transport is None and payload.capacityKg is None:
+        raise HTTPException(status_code=422, detail="Informe o tipo de transporte ou a capacidade em kg.")
+    try:
+        return run_knapsack(
+            orders=payload.orders,
+            transport=payload.transport,
+            capacity_kg=payload.capacityKg
+        )
+    except (ValueError, KeyError) as e:
+        raise HTTPException(status_code=422, detail=str(e))
