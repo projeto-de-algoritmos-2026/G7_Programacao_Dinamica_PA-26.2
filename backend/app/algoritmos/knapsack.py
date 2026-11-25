@@ -96,10 +96,59 @@ def find_selected_items(
     return selected
 
 
+def print_knapsack_log(
+    items: List[Dict[str, Any]],
+    opt: List[List[float]],
+    capacity: int,
+    selected: List[Dict[str, Any]],
+    transport: Optional[str],
+    max_columns: int = 8
+) -> None:
+    """
+    Imprime no terminal o passo a passo didático da PD:
+    os itens, uma amostra da tabela OPT(i, w) e a decisão do traceback para cada pedido.
+    """
+    print("\n------ MOCHILA 0/1 - CARREGAMENTO DO VEICULO (PROGRAMACAO DINAMICA) ------")
+    print(f"Transporte: {transport} | Capacidade: {capacity / UNITS_PER_KG:.1f} kg ({capacity} unidades de 100 g)")
+    print(f"Pedidos analisados: {len(items)} | Tabela OPT: {len(items) + 1} x {capacity + 1}")
+    for item in items:
+        print(f"  Pedido #{item['id']}: peso = {item['weight'] / UNITS_PER_KG:.1f} kg | valor = R$ {item['value']:.2f}")
+
+    # Amostra de colunas igualmente espaçadas (a tabela completa pode ter milhares de colunas)
+    step = max(1, capacity // (max_columns - 1)) if max_columns > 1 else capacity
+    columns = sorted(set(list(range(0, capacity + 1, step)) + [capacity]))
+    print("--------------------------------------------------------------------------")
+    print("Tabela OPT(i, w) [amostra de colunas, w em kg]:")
+    print("i \\ w     " + "".join(f"{w / UNITS_PER_KG:>10.1f}" for w in columns))
+    for i in range(len(items) + 1):
+        label = "vazio" if i == 0 else f"#{items[i - 1]['id']}"
+        print(f"{i:<2} {label:<7}" + "".join(f"{opt[i][w]:>10.2f}" for w in columns))
+
+    print("--------------------------------------------------------------------------")
+    print("Traceback (de OPT(n, W) ate OPT(0, w)):")
+    selected_ids = {item["id"] for item in selected}
+    w = capacity
+    for i in range(len(items), 0, -1):
+        item = items[i - 1]
+        if item["id"] in selected_ids:
+            print(f"  [ESCOLHIDO] Pedido #{item['id']}: OPT({i}, {w}) = {opt[i][w]:.2f} != OPT({i - 1}, {w}) -> w = {w - item['weight']}")
+            w -= item["weight"]
+        else:
+            print(f"  [DESCARTADO] Pedido #{item['id']}: OPT({i}, {w}) = OPT({i - 1}, {w}) = {opt[i][w]:.2f}")
+
+    used = sum(item["weight"] for item in selected)
+    print("--------------------------------------------------------------------------")
+    print(f"Pedidos carregados: {[f'#{item["id"]}' for item in selected]}")
+    print(f"Peso utilizado: {used / UNITS_PER_KG:.1f} kg de {capacity / UNITS_PER_KG:.1f} kg")
+    print(f"Valor total: R$ {opt[len(items)][capacity]:.2f}")
+    print("--------------------------------------------------------------------------\n")
+
+
 def run_knapsack(
     orders: List[Dict[str, Any]],
     transport: Optional[str] = None,
-    capacity_kg: Optional[float] = None
+    capacity_kg: Optional[float] = None,
+    verbose: bool = True
 ) -> Dict[str, Any]:
     """
     Executa o carregamento ótimo do veículo.
@@ -125,6 +174,8 @@ def run_knapsack(
     capacity = kg_to_units(capacity_kg)
     opt = build_knapsack_table(items, capacity)
     selected = find_selected_items(items, opt, capacity)
+    if verbose:
+        print_knapsack_log(items, opt, capacity, selected, transport)
 
     selected_ids = [item["id"] for item in selected]
     used_units = sum(item["weight"] for item in selected)
