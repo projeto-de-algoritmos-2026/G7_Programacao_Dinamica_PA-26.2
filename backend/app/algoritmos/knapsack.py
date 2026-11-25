@@ -8,7 +8,7 @@ Cada pedido i possui um peso w_i e um valor v_i. O objetivo é escolher o
 subconjunto de pedidos que cabe no veículo e que maximiza o valor total.
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 # Capacidade máxima de carga (kg) por tipo de transporte
 VEHICLE_CAPACITY_KG = {
@@ -94,3 +94,54 @@ def find_selected_items(
             w -= items[i - 1]["weight"]
     selected.reverse()
     return selected
+
+
+def run_knapsack(
+    orders: List[Dict[str, Any]],
+    transport: Optional[str] = None,
+    capacity_kg: Optional[float] = None
+) -> Dict[str, Any]:
+    """
+    Executa o carregamento ótimo do veículo.
+    A capacidade vem do tipo de transporte ou pode ser informada diretamente (capacity_kg).
+    """
+    if capacity_kg is None:
+        if transport not in VEHICLE_CAPACITY_KG:
+            raise ValueError("Tipo de transporte inválido. Use 'walk', 'bike', 'moto' ou 'car'.")
+        capacity_kg = VEHICLE_CAPACITY_KG[transport]
+
+    if capacity_kg <= 0:
+        raise ValueError("A capacidade do veículo deve ser maior que zero.")
+
+    order_ids = [order["id"] for order in orders]
+    if len(set(order_ids)) != len(order_ids):
+        raise ValueError("O lote contém IDs de pedidos duplicados.")
+
+    items = prepare_items(orders)
+    for item in items:
+        if item["weight"] < 0 or item["value"] < 0:
+            raise ValueError(f"O pedido #{item['id']} possui peso ou valor negativo.")
+
+    capacity = kg_to_units(capacity_kg)
+    opt = build_knapsack_table(items, capacity)
+    selected = find_selected_items(items, opt, capacity)
+
+    selected_ids = [item["id"] for item in selected]
+    used_units = sum(item["weight"] for item in selected)
+    oversized_ids = [item["id"] for item in items if item["weight"] > capacity]
+    left_out_ids = [
+        item["id"] for item in items
+        if item["id"] not in selected_ids and item["id"] not in oversized_ids
+    ]
+
+    return {
+        "transport": transport,
+        "capacityKg": capacity_kg,
+        "selectedOrderIds": selected_ids,
+        "leftOutOrderIds": left_out_ids,
+        "oversizedOrderIds": oversized_ids,
+        "totalValue": round(opt[len(items)][capacity], 2),
+        "totalWeightKg": round(used_units / UNITS_PER_KG, 1),
+        "usedCapacityPercent": round(100 * used_units / capacity, 1),
+        "tableSize": {"rows": len(items) + 1, "columns": capacity + 1},
+    }
