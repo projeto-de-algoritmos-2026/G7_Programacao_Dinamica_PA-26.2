@@ -261,3 +261,33 @@ export async function calculateBreakpointsAPI(payload: {
     }
 }
 
+export interface KnapsackResult {
+    transport: string | null;
+    capacityKg: number;
+    selectedOrderIds: number[];
+    leftOutOrderIds: number[];
+    oversizedOrderIds: number[];
+    totalValue: number;
+    totalWeightKg: number;
+    usedCapacityPercent: number;
+    tableSize: { rows: number; columns: number };
+}
+
+export async function calculateKnapsackAPI(payload: {
+    orders: { id: number; weightKg?: number; totalPrice?: number }[];
+    transport?: string;
+    capacityKg?: number;
+}): Promise<KnapsackResult> {
+    const res = await fetch(`${BASE_URL}/api/load/knapsack`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+        const error = await res.json().catch(() => null);
+        throw new Error(error?.detail || "Não foi possível calcular o carregamento do veículo.");
+    }
+    return await res.json();
+}
