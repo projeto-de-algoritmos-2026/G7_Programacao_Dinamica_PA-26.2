@@ -127,6 +127,13 @@ export default function DeliveryCalendarPage() {
         }
     };
 
+    // Usa os pedidos carregados pela mochila como o lote que segue para a agenda (Minimize Lateness)
+    const handleUseLoadAsBatch = () => {
+        if (!knapsackResult || knapsackResult.selectedOrderIds.length === 0) return;
+        setSelectedOrderIds(knapsackResult.selectedOrderIds);
+        toast.info(`Lote atualizado com os ${knapsackResult.selectedOrderIds.length} pedido(s) carregados. Clique em Otimizar Agenda.`);
+    };
+
     const handleFindTwins = async () => {
         setFindingTwins(true);
         setStatusMessage("Procurando o par de entregas mais próximo no mapa...");
@@ -925,6 +932,15 @@ export default function DeliveryCalendarPage() {
                                             );
                                         })}
                                 </ul>
+                                <button
+                                    type="button"
+                                    onClick={handleUseLoadAsBatch}
+                                    disabled={knapsackResult.selectedOrderIds.length === 0}
+                                    className="w-full py-2.5 rounded-2xl bg-[#6032F6] hover:bg-[#5227DF] active:scale-[0.99] disabled:opacity-50 text-white text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2"
+                                >
+                                    <FiCheckCircle size={14} />
+                                    <span>Usar Carga como Lote</span>
+                                </button>
                                 <p className="text-[10px] font-medium text-[#17181A]/40">
                                     Tabela OPT(i, w) com {knapsackResult.tableSize.rows} x {knapsackResult.tableSize.columns} posições (pesos em unidades de 100 g).
                                 </p>
