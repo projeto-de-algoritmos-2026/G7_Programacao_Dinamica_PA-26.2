@@ -10,7 +10,9 @@ import {
     compareSchedulingStrategiesAPI,
     calculateChainRouteAPI,
     evaluateManualRouteAPI,
-    type ManualRouteEvaluation
+    calculateKnapsackAPI,
+    type ManualRouteEvaluation,
+    type KnapsackResult
 } from "../../../api/api";
 import {
     geocodeCEP,
@@ -51,6 +53,9 @@ const MultiStopDeliveryMap = dynamic(
 );
 
 // Coordenadas conhecidas dos CEPs de demonstração para carregamento instantâneo
+// Capacidade de carga (kg) por transporte - espelha VEHICLE_CAPACITY_KG do backend
+const VEHICLE_CAPACITY_KG: Record<string, number> = { walk: 3, bike: 8, moto: 20, car: 150 };
+
 const KNOWN_COORDS: Record<string, { lat: number; lon: number; address: string }> = {
     "70040-010": { lat: -15.7981, lon: -47.8825, address: "Setor Bancário Sul (SBS), Brasília/DF" },
     "70710-500": { lat: -15.7725, lon: -47.8860, address: "SHCGN 702/703 - Asa Norte, Brasília/DF" },
@@ -96,6 +101,31 @@ export default function DeliveryCalendarPage() {
 
     const [findingTwins, setFindingTwins] = useState(false);
     const [closestPairCoords, setClosestPairCoords] = useState<[number, number][]>([]);
+
+    // Mochila 0/1 - Carregamento do Veículo
+    const [knapsackResult, setKnapsackResult] = useState<KnapsackResult | null>(null);
+    const [calculatingLoad, setCalculatingLoad] = useState(false);
+
+    // Ao trocar de transporte a capacidade muda, então o carregamento anterior deixa de valer
+    useEffect(() => {
+        setKnapsackResult(null);
+    }, [transport]);
+
+    const handleCalculateLoad = async () => {
+        setCalculatingLoad(true);
+        try {
+            const result = await calculateKnapsackAPI({
+                orders: allOrders.map(o => ({ id: o.id, weightKg: o.weightKg ?? 0, totalPrice: o.totalPrice ?? 0 })),
+                transport
+            });
+            setKnapsackResult(result);
+            toast.success(`Carga ideal calculada: ${result.selectedOrderIds.length} pedido(s), ${result.totalWeightKg} kg.`);
+        } catch (err: any) {
+            toast.error(err.message || "Erro ao calcular o carregamento do veículo.");
+        } finally {
+            setCalculatingLoad(false);
+        }
+    };
 
     const handleFindTwins = async () => {
         setFindingTwins(true);
@@ -793,6 +823,47 @@ export default function DeliveryCalendarPage() {
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Bloco 1.5: Carregamento do Veículo (Mochila 0/1 - Programação Dinâmica) */}
+                    <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-black/5">
+                        <div className="flex items-center justify-between mb-3">
+                            <h2 className="text-sm font-black uppercase tracking-wider text-[#17181A] flex items-center gap-2">
+                                <FiPackage className="text-[#6032F6]" />
+                                Carregamento do Veículo
+                            </h2>
+                            <span className="text-[11px] font-bold text-[#17181A]/40 uppercase">Mochila 0/1</span>
+                        </div>
+                        <p className="text-[11px] font-medium text-[#17181A]/60 mb-3">
+                            Escolhe, entre os pedidos disponíveis, a combinação de maior valor que cabe na
+                            capacidade de carga do transporte selecionado.
+                        </p>
+                        <div className="flex items-center justify-between gap-3 bg-[#F5F2EB] rounded-2xl px-3.5 py-2.5 mb-3">
+                            <span className="text-[11px] font-black uppercase tracking-wider text-[#17181A]/60">
+                                Capacidade de carga
+                            </span>
+                            <span className="text-xs font-black text-[#17181A]">
+                                {VEHICLE_CAPACITY_KG[transport]} kg
+                            </span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleCalculateLoad}
+                            disabled={calculatingLoad || allOrders.length === 0}
+                            className="w-full py-3 rounded-2xl bg-[#17181A] hover:bg-black active:scale-[0.99] disabled:opacity-50 text-white text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2"
+                        >
+                            {calculatingLoad ? (
+                                <>
+                                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                                    <span>Calculando carga...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <FiPackage size={15} />
+                                    <span>Calcular Carga Ideal</span>
+                                </>
+                            )}
+                        </button>
                     </div>
 
                     {/* Bloco 2: Seleção de Pedidos do Lote */}
