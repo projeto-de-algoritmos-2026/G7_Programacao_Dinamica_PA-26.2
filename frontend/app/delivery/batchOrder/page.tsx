@@ -864,6 +864,72 @@ export default function DeliveryCalendarPage() {
                                 </>
                             )}
                         </button>
+
+                        {knapsackResult && (
+                            <div className="mt-4 space-y-3" role="status" aria-live="polite">
+                                {/* Resumo: valor, peso e barra de ocupação */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="bg-[#6032F6]/5 rounded-2xl px-3.5 py-2.5">
+                                        <span className="block text-[10px] font-black uppercase tracking-wider text-[#17181A]/50">Valor carregado</span>
+                                        <span className="text-sm font-black text-[#6032F6]">
+                                            R$ {knapsackResult.totalValue.toFixed(2).replace(".", ",")}
+                                        </span>
+                                    </div>
+                                    <div className="bg-[#6032F6]/5 rounded-2xl px-3.5 py-2.5">
+                                        <span className="block text-[10px] font-black uppercase tracking-wider text-[#17181A]/50">Peso utilizado</span>
+                                        <span className="text-sm font-black text-[#17181A]">
+                                            {knapsackResult.totalWeightKg} / {knapsackResult.capacityKg} kg
+                                        </span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="flex justify-between text-[10px] font-bold text-[#17181A]/50 mb-1">
+                                        <span>Ocupação do veículo</span>
+                                        <span>{knapsackResult.usedCapacityPercent}%</span>
+                                    </div>
+                                    <div className="h-2 rounded-full bg-[#F5F2EB] overflow-hidden">
+                                        <div
+                                            className="h-full bg-[#6032F6] rounded-full transition-all"
+                                            style={{ width: `${Math.min(100, knapsackResult.usedCapacityPercent)}%` }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Pedidos por situação */}
+                                <ul className="divide-y divide-black/5">
+                                    {allOrders
+                                        .filter(o => knapsackResult.selectedOrderIds.includes(o.id)
+                                            || knapsackResult.leftOutOrderIds.includes(o.id)
+                                            || knapsackResult.oversizedOrderIds.includes(o.id))
+                                        .map(order => {
+                                            const status = knapsackResult.selectedOrderIds.includes(order.id)
+                                                ? "selected"
+                                                : knapsackResult.oversizedOrderIds.includes(order.id) ? "oversized" : "leftOut";
+                                            return (
+                                                <li key={order.id} className="flex items-center justify-between gap-2 py-2">
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs font-bold text-[#17181A] truncate">
+                                                            Pedido #{order.id} · {order.customerName}
+                                                        </p>
+                                                        <p className="text-[10px] font-semibold text-[#17181A]/50">
+                                                            {order.weightKg ?? 0} kg · R$ {order.totalPrice?.toFixed(2).replace(".", ",")}
+                                                        </p>
+                                                    </div>
+                                                    <span className={`shrink-0 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${status === "selected"
+                                                        ? "bg-emerald-100 text-emerald-700"
+                                                        : status === "oversized" ? "bg-rose-100 text-rose-700" : "bg-zinc-100 text-zinc-500"
+                                                        }`}>
+                                                        {{ selected: "Carregado", leftOut: "Fora da carga", oversized: "Excede o veículo" }[status]}
+                                                    </span>
+                                                </li>
+                                            );
+                                        })}
+                                </ul>
+                                <p className="text-[10px] font-medium text-[#17181A]/40">
+                                    Tabela OPT(i, w) com {knapsackResult.tableSize.rows} x {knapsackResult.tableSize.columns} posições (pesos em unidades de 100 g).
+                                </p>
+                            </div>
+                        )}
                     </div>
 
                     {/* Bloco 2: Seleção de Pedidos do Lote */}
@@ -993,6 +1059,7 @@ export default function DeliveryCalendarPage() {
                                                     </p>
                                                     <p className="text-[10px] font-bold text-[#6032F6]">
                                                         R$ {order.totalPrice?.toFixed(2).replace(".", ",")}
+                                                        <span className="text-[#17181A]/40 font-semibold"> · {order.weightKg ?? 0} kg</span>
                                                     </p>
                                                 </div>
                                             </div>
