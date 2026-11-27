@@ -8,6 +8,7 @@ Cada pedido i possui um peso w_i e um valor v_i. O objetivo é escolher o
 subconjunto de pedidos que cabe no veículo e que maximiza o valor total.
 """
 
+import math
 from typing import Any, Dict, List, Optional
 
 # Capacidade máxima de carga (kg) por tipo de transporte
@@ -20,6 +21,10 @@ VEHICLE_CAPACITY_KG = {
 
 # A PD trabalha com pesos inteiros: 1 unidade = 0,1 kg (100 g)
 UNITS_PER_KG = 10
+
+# Limite de capacidade aceito: a tabela tem W + 1 colunas, então uma capacidade
+# muito grande (O(n * W) pseudo-polinomial) travaria o servidor
+MAX_CAPACITY_KG = 1000.0
 
 
 def kg_to_units(weight_kg: float) -> int:
@@ -35,13 +40,30 @@ def prepare_items(orders: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
       - value:  valor v_i do pedido (totalPrice)
     """
     items = []
-    for order in orders:
+    for position, order in enumerate(orders, start=1):
+        if order.get("id") is None:
+            raise ValueError(f"O pedido na posição {position} não possui ID.")
+        weight_kg = to_number(order.get("weightKg"), f"peso do pedido #{order['id']}")
+        value = to_number(order.get("totalPrice"), f"valor do pedido #{order['id']}")
         items.append({
             "id": order["id"],
-            "weight": kg_to_units(float(order.get("weightKg") or 0.0)),
-            "value": float(order.get("totalPrice") or 0.0),
+            "weight": kg_to_units(weight_kg),
+            "value": value,
         })
     return items
+
+
+def to_number(raw: Any, field: str) -> float:
+    """Converte um campo numérico do pedido; ausente vale 0. Rejeita texto, NaN e infinito."""
+    if raw is None:
+        return 0.0
+    try:
+        number = float(raw)
+    except (TypeError, ValueError):
+        raise ValueError(f"O {field} deve ser um número.") from None
+    if not math.isfinite(number):
+        raise ValueError(f"O {field} deve ser um número finito.")
+    return number
 
 
 def build_knapsack_table(items: List[Dict[str, Any]], capacity: int) -> List[List[float]]:
@@ -162,12 +184,14 @@ def run_knapsack(
 
     if capacity_kg <= 0:
         raise ValueError("A capacidade do veículo deve ser maior que zero.")
+    if capacity_kg > MAX_CAPACITY_KG:
+        raise ValueError(f"A capacidade máxima aceita é de {MAX_CAPACITY_KG:.0f} kg.")
 
-    order_ids = [order["id"] for order in orders]
+    items = prepare_items(orders)
+    order_ids = [item["id"] for item in items]
     if len(set(order_ids)) != len(order_ids):
         raise ValueError("O lote contém IDs de pedidos duplicados.")
 
-    items = prepare_items(orders)
     for item in items:
         if item["weight"] < 0 or item["value"] < 0:
             raise ValueError(f"O pedido #{item['id']} possui peso ou valor negativo.")

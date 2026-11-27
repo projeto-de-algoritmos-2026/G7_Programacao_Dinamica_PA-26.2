@@ -7,7 +7,7 @@ import unittest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.algoritmos.knapsack import VEHICLE_CAPACITY_KG, run_knapsack
+from app.algoritmos.knapsack import MAX_CAPACITY_KG, VEHICLE_CAPACITY_KG, run_knapsack
 from app.routes.algoritmos import router
 
 
@@ -91,6 +91,24 @@ class KnapsackTests(unittest.TestCase):
             run_knapsack(self.demo_orders + [self.demo_orders[0]], "car", verbose=False)
         with self.assertRaises(ValueError):
             run_knapsack([{"id": 1, "weightKg": -1, "totalPrice": 10}], "car", verbose=False)
+
+    def test_edge_case_messages(self):
+        cases = [
+            ([{"weightKg": 1, "totalPrice": 10}], "posição 1 não possui ID"),
+            ([{"id": 1, "weightKg": "abc", "totalPrice": 10}], "peso do pedido #1 deve ser um número"),
+            ([{"id": 1, "weightKg": float("nan"), "totalPrice": 10}], "número finito"),
+            ([{"id": 1, "weightKg": 1, "totalPrice": "caro"}], "valor do pedido #1 deve ser um número"),
+        ]
+        for orders, message in cases:
+            with self.assertRaisesRegex(ValueError, message):
+                run_knapsack(orders, "car", verbose=False)
+        with self.assertRaisesRegex(ValueError, "capacidade máxima"):
+            run_knapsack(self.demo_orders, capacity_kg=MAX_CAPACITY_KG + 1, verbose=False)
+
+    def test_missing_weight_and_value_count_as_zero(self):
+        result = run_knapsack([{"id": 1}, {"id": 2, "weightKg": 1, "totalPrice": 5}], "walk", verbose=False)
+        self.assertEqual(result["totalValue"], 5.0)
+        self.assertIn(2, result["selectedOrderIds"])
 
 
 class KnapsackEndpointTests(unittest.TestCase):

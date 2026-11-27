@@ -106,10 +106,12 @@ export default function DeliveryCalendarPage() {
     const [knapsackResult, setKnapsackResult] = useState<KnapsackResult | null>(null);
     const [calculatingLoad, setCalculatingLoad] = useState(false);
 
-    // Ao trocar de transporte a capacidade muda, então o carregamento anterior deixa de valer
+    // O carregamento anterior deixa de valer quando muda a capacidade (transporte)
+    // ou o conjunto de pedidos disponíveis (ex.: "Ver Todos" / "Mostrar todos")
+    const availableOrderIdsKey = allOrders.map(o => o.id).join(",");
     useEffect(() => {
         setKnapsackResult(null);
-    }, [transport]);
+    }, [transport, availableOrderIdsKey]);
 
     const handleCalculateLoad = async () => {
         setCalculatingLoad(true);
