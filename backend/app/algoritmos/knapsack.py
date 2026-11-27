@@ -115,8 +115,9 @@ def print_knapsack_log(
         print(f"  Pedido #{item['id']}: peso = {item['weight'] / UNITS_PER_KG:.1f} kg | valor = R$ {item['value']:.2f}")
 
     # Amostra de colunas igualmente espaçadas (a tabela completa pode ter milhares de colunas)
-    step = max(1, capacity // (max_columns - 1)) if max_columns > 1 else capacity
-    columns = sorted(set(list(range(0, capacity + 1, step)) + [capacity]))
+    # sempre incluindo w = 0 e w = W, sem colunas repetidas ou coladas no final
+    intervals = max(1, max_columns - 1)
+    columns = sorted({round(k * capacity / intervals) for k in range(intervals + 1)})
     print("--------------------------------------------------------------------------")
     print("Tabela OPT(i, w) [amostra de colunas, w em kg]:")
     print("i \\ w     " + "".join(f"{w / UNITS_PER_KG:>10.1f}" for w in columns))
