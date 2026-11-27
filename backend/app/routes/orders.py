@@ -28,6 +28,7 @@ PRODUCT_WEIGHTS_KG = {
     "Teclado Mecânico Keychron K2": 1.1,
     "Mochila Dell Pro Slim 15": 0.9,
     "Cadeira Gamer ThunderX3": 22.0,
+    "Monitor LG UltraWide 29": 6.5,
 }
 DEFAULT_PRODUCT_WEIGHT_KG = 1.0
 
@@ -138,6 +139,25 @@ DEMO_ORDERS = [
                 "product": {"name": "Cadeira Gamer ThunderX3", "price": 1250.00}
             }
         ]
+    },
+    {
+        "id": 106,
+        "userId": "usr-06",
+        "customerName": "Felipe Duarte",
+        "cep": "70832-525",
+        "address": "SQN 403 Bloco C - Asa Norte, Brasília/DF",
+        "totalPrice": 1599.00,
+        "createdAt": (datetime.now() - timedelta(minutes=20)).isoformat(),
+        "deadline": (datetime.now() + timedelta(minutes=75)).replace(microsecond=0).isoformat(),
+        "items": [
+            {
+                "id": 6,
+                "productId": 8,
+                "quantity": 1,
+                "price": 1599.00,
+                "product": {"name": "Monitor LG UltraWide 29", "price": 1599.00}
+            }
+        ]
     }
 ]
 
@@ -242,7 +262,7 @@ async def list_orders():
 
     # Retorna DEMO_ORDERS atualizados com base no horário presente
     now = datetime.now()
-    offsets = [35, 20, 65, 50, 90]
+    offsets = [35, 20, 65, 50, 90, 75]
     for idx, demo in enumerate(DEMO_ORDERS):
         offset = offsets[idx % len(offsets)]
         demo["deadline"] = (now + timedelta(minutes=offset)).replace(microsecond=0).isoformat()
